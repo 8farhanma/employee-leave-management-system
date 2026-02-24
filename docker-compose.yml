@@ -1,0 +1,66 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: elms_app
+    volumes:
+      - ./backend:/var/www
+      - /var/www/vendor
+    networks:
+      - elms_network
+    depends_on:
+      - db
+    environment:
+      - APP_ENV=local
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: elms_frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    networks:
+      - elms_network
+    command: npm run dev -- --host
+
+  nginx:
+    image: nginx:alpine
+    container_name: elms_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./backend:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - elms_network
+    depends_on:
+      - app
+
+  db:
+    image: mysql:8.0
+    container_name: elms_db
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: cuti_db
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_USER: elms_user
+      MYSQL_PASSWORD: elms_pass
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - elms_network
+
+networks:
+  elms_network:
+    driver: bridge
+
+volumes:
+  mysql_data:
