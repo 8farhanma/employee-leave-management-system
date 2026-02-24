@@ -1,0 +1,13 @@
+# Laravel
+backend/.env
+backend/vendor/
+backend/storage/logs/
+backend/storage/framework/cache/
+
+# React
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# Docker
+*.log
