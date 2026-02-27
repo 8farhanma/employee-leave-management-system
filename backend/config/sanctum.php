@@ -47,7 +47,8 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Token expired setelah 8 jam (satu shift kerja)
+    'expiration' => 480,
 
     /*
     |--------------------------------------------------------------------------

@@ -20,11 +20,11 @@ return new class extends Migration
             $table->string('nama', 100);
 
             $table->enum('departemen', [
-                'sewing',
-                'cutting',
+                'Sewing',
+                'Cutting',
                 'Finishing',
-                'QC',
-            ]);
+                'QA',
+            ])->nullable();
 
             $table->enum('role', ['karyawan', 'admin'])
                 ->default('karyawan');

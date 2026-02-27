@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -10,27 +10,25 @@ use Illuminate\Support\Facades\Route;
 | Prefix: /api/v1/ (Sudah diatur di bootstrap/app.php)
 */
 
-// --- 1. Public Routes (Bisa diakses tanpa login) ---
-Route::get('/status', function () {
-    return response()->json([
-        'app_name' => 'ELMS API',
-        'version' => 'v1.0',
-        'status' => 'Connected'
-    ]);
+// --- 1. Public Routes (tidak perlu token) ---
+Route::prefix('auth')->group(function () {
+    Route::post('/login', [AuthController::class, 'login']);
 });
 
-// --- 2. Protected Routes (Harus Login/Punya Token) ---
-Route::middleware('auth:sanctum')->group(function () {
+// --- 2. Protected Routes (Harus Punya Token) ---
+Route::middleware('auth:sanctum', 'karyawan')->group(function () {
     
-    // Ambil data profil user yang sedang login
-    Route::get('/user', function (Request $request) {
-        return $request->user();
+    // Auth
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/me', [AuthController::class, 'me']);
     });
 
-    // Contoh Grouping untuk fitur ELMS ke depannya
-    // Route::prefix('leaves')->group(function () {
-    //     Route::get('/', [LeaveController::class, 'index']);
-    //     Route::post('/apply', [LeaveController::class, 'store']);
-    // });
+    // Placeholder untuk hari-hari berikutnya
+    // Route::apiResource('/cuti', CutiController::class);
+
+    // Admin Routes (Hanya untuk admin)
+    Route::middleware('admin')->prefix('admin')->group(function () {
+        // Placeholder
+        // Route::get('/cuti', [AdminCutiController::class, 'index']);
     
 });
