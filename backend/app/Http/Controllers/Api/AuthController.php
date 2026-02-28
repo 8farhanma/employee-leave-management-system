@@ -37,7 +37,7 @@ class AuthController extends Controller
         $karyawan->tokens()->delete();
 
         // BUat token baru dengan abilities sesuai role
-        $abilities = $karyawan->isAdmin()
+        $abilities = $karyawan->is_admin
             ? ['admin', 'karyawan'] // Admin bisa akses semua
             : ['karyawan'];         // Karyawan biasa hanya bisa akses fitur karyawan
 

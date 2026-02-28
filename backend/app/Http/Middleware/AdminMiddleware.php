@@ -12,7 +12,7 @@ class AdminMiddleware
     {
         $karyawan = $request->user();
 
-        if (! $karyawan || ! $karyawan->is_admin()) {
+        if (! $karyawan || ! $karyawan->is_admin) {
             return response()->json([
             'success' => false,  
             'message' => 'Akses ditolak. Hanya Admin mengakses endpoint ini.',

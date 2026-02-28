@@ -18,11 +18,11 @@ class KaryawanSeeder extends Seeder
             [
                 'nik'        => 'HRD001',
                 'nama'       => 'Budi Santoso',
-                'departemen' => null,  // ← HRD tidak punya dept produksi
+                'departemen' => null,  // ← admin murni, bukan departemen produksi
                 'role'       => 'admin',
                 'email'      => 'admin@company.id',
                 'password'   => Hash::make('admin123'),
-                'sisa_cuti'  => 12,
+                'sisa_cuti'  => 0,  // admin tidak memiliki cuti
             ],
 
             // ── DEPARTEMEN SEWING ─────────────────────────────────────────
