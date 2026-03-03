@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   app:
     build:
@@ -8,7 +6,6 @@ services:
     container_name: elms_app
     volumes:
       - ./backend:/var/www
-      - /var/www/vendor
     networks:
       - elms_network
     depends_on:

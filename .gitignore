@@ -11,3 +11,9 @@ frontend/.env
 
 # Docker
 *.log
+
+# Git (Paksa LF)
+* text=auto eol=lf
+*.php text eol=lf
+*.json text eol=lf
+*.env text eol=lf

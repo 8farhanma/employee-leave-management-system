@@ -82,7 +82,7 @@ class UpdateKaryawanRequest extends FormRequest
         ];
     }
 
-    public function failedValidation(Validator $validator): void
+    protected function failedValidation(Validator $validator): void
     {
         throw new HttpResponseException(
             response()->json([

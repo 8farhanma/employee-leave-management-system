@@ -10,6 +10,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // CHECK constraints hanya didukung MySQL 8.0+
+        // SQLite (test environment) tidak support ALTER TABLE ADD CONSTRAINT
+        if (DB::getDriverName() !== 'mysql') {
+            return; // skip di SQLite / PostgreSQL
+        }
+
         // Pastikan tanggal_selesai >= tanggal_mulai di level DB
         // (sebagai safety net di luar validasi laravel)
         DB::statement('
