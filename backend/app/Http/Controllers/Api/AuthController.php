@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterKaryawanRequest;
 use App\Http\Resources\KaryawanResource;
+use App\Http\Traits\ApiResponseTrait;
 use App\Models\Karyawan;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,8 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    use ApiResponseTrait;
+
     // ────────────────────────────────────────────────────────────────
     // POST /api/auth/register
     // Hanya admin yang bisa daftarkan karyawan baru
@@ -31,11 +34,10 @@ class AuthController extends Controller
 
         ]);
 
-        return response()->json([
-            'success'   => true,
-            'message'   => "Karyawan {$karyawan->nama} berhasil didaftarkan.",
-            'data'      => new KaryawanResource($karyawan),
-        ], 201);
+        return $this->createdResponse(
+            new KaryawanResource($karyawan),
+            "Karyawan {$karyawan->nama} berhasil didaftarkan."
+        );
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -78,16 +80,12 @@ class AuthController extends Controller
             abilities: $abilities,
         )->plainTextToken;
 
-        return response()->json([
-            'success'   => true,
-            'message'   => 'Login berhasil. Selamat datang, ' . $karyawan->nama . '!',
-            'data'      => [
-                'token'         => $token,
-                'token_type'    => 'Bearer',
-                'expires_in'    => config('sanctum.expiration') . ' menit',
-                'karyawan'      => new KaryawanResource($karyawan),
-                ],
-        ], 200);
+        return $this->successResponse([
+            'token'     => $token,
+            'token_type'=> 'Bearer',
+            'expires_in'=> config('sanctum.expiration') . ' menit',
+            'karyawan'  => new KaryawanResource($karyawan),
+        ], 'Login berhasil. Selamat datang, ' . $karyawan->nama . '!');
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -103,10 +101,9 @@ class AuthController extends Controller
         // Hapus semua token milik user ini — paling reliable di test & production
         $user->tokens()->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => "Sampai jumpa, {$nama}! Anda berhasil logout.",
-        ], 200);
+        return $this->successResponse(
+            message: "Sampai jumpa, {$nama}! Anda berhasil logout."
+            );
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -118,27 +115,22 @@ class AuthController extends Controller
     {
         $karyawan = $request->user();
 
-        // Ganti loadCount dengan query terpisah yang lebih sederhana
-        // loadCount dengan multiple closures kadang crash di environment tertentu
         $totalPengajuan = $karyawan->cutiKaryawan()->count();
         $totalPending   = $karyawan->cutiKaryawan()->where('status', 'pending')->count();
         $totalApproved  = $karyawan->cutiKaryawan()->where('status', 'approved')->count();
         $totalRejected  = $karyawan->cutiKaryawan()->where('status', 'rejected')->count();
 
-        return response()->json([
-            'success' => true,
-            'data'    => [
-                'profil'    => new KaryawanResource($karyawan),
-                'statistik' => [
-                    'total_pengajuan' => $totalPengajuan,
-                    'total_pending'   => $totalPending,
-                    'total_approved'  => $totalApproved,
-                    'total_rejected'  => $totalRejected,
-                    'sisa_cuti'       => $karyawan->sisa_cuti,
-                    'jatah_tahunan'   => 12,
-                    'cuti_terpakai'   => 12 - $karyawan->sisa_cuti,
-                ],
+        return $this->successResponse([
+            'profil'    => new KaryawanResource($karyawan),
+            'statistik' => [
+                'total_pengajuan' => $totalPengajuan,
+                'total_pending'   => $totalPending,
+                'total_approved'  => $totalApproved,
+                'total_rejected'  => $totalRejected,
+                'sisa_cuti'       => $karyawan->sisa_cuti,
+                'jatah_tahunan'   => 12,
+                'cuti_terpakai'   => 12 - $karyawan->sisa_cuti,
             ],
-        ], 200);
+        ]);
     }
 }
