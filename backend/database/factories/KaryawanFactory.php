@@ -15,7 +15,7 @@ class KaryawanFactory extends Factory
 
     public function definition(): array
     {
-        $dept = $this->faker->randomElement($this->departemen);
+        $dept = $this->faker->randomElement(\App\Constants\LeaveConstants::DEPARTMENTS);
         $prefix = strtoupper(substr($dept, 0, 3));
 
         return [

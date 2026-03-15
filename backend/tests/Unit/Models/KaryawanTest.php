@@ -23,16 +23,16 @@ class KaryawanTest extends TestCase
         $this->assertFalse($karyawan->is_admin);
     }
 
-    public function test_bisa_ajukan_cuti_returns_false_when_not_enough(): void
+    public function test_bisa_submit_cuti_returns_false_when_not_enough(): void
     {
         $karyawan = new Karyawan(['sisa_cuti' => 2]);
-        $this->assertFalse($karyawan->bisaAjukanCuti(3));
+        $this->assertFalse($karyawan->bisaSubmitCuti(3));
     }
 
-    public function test_bisa_ajukan_cuti_returns_false_when_sisa_nol(): void
+    public function test_bisa_submit_cuti_returns_false_when_sisa_nol(): void
     {
         $karyawan = new Karyawan(['sisa_cuti' => 0]);
-        $this->assertFalse($karyawan->bisaAjukanCuti(1));
+        $this->assertFalse($karyawan->bisaSubmitCuti(1));
     }
 
     public function test_sisa_cuti_label_when_habis(): void

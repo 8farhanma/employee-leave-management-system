@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Karyawan;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\JenisCutiResource;
 use App\Models\JenisCuti;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class JenisCutiController extends Controller
 {
@@ -16,15 +17,22 @@ class JenisCutiController extends Controller
     // ────────────────────────────────────────────────────────────────
     public function index(Request $request): JsonResponse
     {
-        $query = JenisCuti::query();
+        // Cache 24 jam - clear manual jika ada perubahan data master
+        $cacheKey = 'jenis_cuti_all';
 
         // Filter opsional: ?potong_jatah=true / false
         if ($request->has('potong_jatah')) {
-            $potong = filter_var($request->potong_jatah, FILTER_VALIDATE_BOOLEAN);
-            $query->where('potong_jatah', $potong);
+            // Request dengan filter tidak di-cache
+            // (traffic rendah, data sudah kecil)
+            $jenisCuti = JenisCuti::query()
+                ->where('potong_jatah', filter_var($request->potong_jatah, FILTER_VALIDATE_BOOLEAN))
+                ->orderBy('nama')
+                ->get();
+        } else {
+            $jenisCuti = Cache::remember($cacheKey, now()->addHours(24), function () {
+                return JenisCuti::orderBy('nama')->get();
+            });
         }
-
-        $jenisCuti = $query->orderBy('nama')->get();
 
         return response()->json([
             'success'   => true,

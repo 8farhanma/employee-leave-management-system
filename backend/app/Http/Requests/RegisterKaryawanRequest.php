@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Constants\LeaveConstants;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -38,12 +39,12 @@ class RegisterKaryawanRequest extends FormRequest
 
             'departemen' => [
                 'required',
-                Rule::in(['Sewing', 'Cutting', 'Finishing', 'QA']),
+                Rule::in(LeaveConstants::DEPARTMENTS),
             ],
 
             'email' => [
                 'required',
-                'email:rfc',            // validasi email + DNS
+                'email:rfc',            
                 'unique:karyawan,email',
                 'max:100',    
             ],
@@ -58,14 +59,14 @@ class RegisterKaryawanRequest extends FormRequest
 
             'role' => [
                 'sometimes',                // role opsional, default 'karyawan'
-                Rule::in(['karyawan', 'admin']),
+                Rule::in(LeaveConstants::ALL_ROLES),
             ],
 
             'sisa_cuti' => [
                 'sometimes',
                 'integer',                
                 'min:0',
-                'max:12',
+                'max:' . LeaveConstants::ANNUAL_QUOTA
             ],
         ];
     }

@@ -48,7 +48,7 @@ return [
     */
 
     // Token expired setelah 8 jam (satu shift kerja)
-    'expiration' => 480,
+    'expiration' => env('SANCTUM_EXPIRATION',480),
 
     /*
     |--------------------------------------------------------------------------

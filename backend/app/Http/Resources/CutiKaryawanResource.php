@@ -32,6 +32,7 @@ class CutiKaryawanResource extends JsonResource
             }),
             'approved_at'       => $this->approved_at?->format('Y-m-d H:i:s'),
             'created_at'        => $this->created_at->format('Y-m-d H:i:s'),
+            'jenis_cuti'        => new JenisCutiResource($this->whenLoaded('jenisCuti')),
         ];
     }
 }

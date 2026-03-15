@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\CutiService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,7 +12,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Bind CutiService sebagai singleton
+        // Satu instance dipakai sepanjang request
+        $this->app->singleton(CutiService::class, function ($app) {
+            return new CutiService();
+        });
     }
 
     /**
@@ -19,6 +24,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Set Carbon locale ke Bahasa Indonesia
+        \Carbon\Carbon::setLocale('id');
     }
 }

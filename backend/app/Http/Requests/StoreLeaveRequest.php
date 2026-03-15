@@ -2,8 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Constants\LeaveConstants;
+use App\Models\CutiKaryawan;
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Contracts\Validation\Validator as ValidatorInstance;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class StoreLeaveRequest extends FormRequest
@@ -98,5 +102,70 @@ class StoreLeaveRequest extends FormRequest
                 'errors' => $validator->errors(),
             ], 422)
         );
+    }
+
+    public function withValidator(ValidatorInstance $validator): void
+    {
+        $validator->after(function (ValidatorInstance $v) {
+
+            /**
+             * Validasi overlap tanggal
+             */
+
+            // Hanya cek jika tanggal valid dulu
+            if ($v->errors()->hasAny(['tanggal_mulai', 'tanggal_selesai'])) {
+                return;
+            }
+
+            $overlap = CutiKaryawan::where('karyawan_id', $this->user()->id)
+                ->whereIn('status', [
+                    LeaveConstants::STATUS_PENDING,
+                    LeaveConstants::STATUS_APPROVED,
+                ])
+                ->where(function ($q) {
+                    // Cek overlap: ada pengajuan lain yang tanggalnya bertabrakan
+                    $q->whereBetween('tanggal_mulai', [
+                            $this->tanggal_mulai,
+                            $this->tanggal_selesai,
+                        ])
+                        ->orWhereBetween('tanggal_selesai', [
+                            $this->tanggal_mulai,
+                            $this->tanggal_selesai,
+                        ])
+                        ->orWhere(function ($q2) {
+                            // Kasus: request baru membungkus request lama
+                            $q2->where('tanggal_mulai', '<=', $this->tanggal_mulai)
+                            ->where('tanggal_selesai', '>=', $this->tanggal_selesai);
+                        });
+                })
+                ->exists();
+            
+            if ($overlap) {
+                $v->errors()->add(
+                    'tanggal_mulai',
+                    'Terdapat pengajuan cuti lain yang tanggalnya bertabrakan ' .
+                    'dengan periode ini.'
+                );
+            }  
+            
+            /**
+             * Batas maksimum hari per pengajuan
+             */
+            if ($v->errors()->hasAny(['tanggal_mulai', 'tanggal_selesai'])) {
+                return;
+            }
+
+            $jumlahHari = Carbon::parse($this->tanggal_mulai)
+                                ->diffInDays($this->tanggal_selesai) + 1;
+
+            // Maksimum 12 hari per pengajuan (= 1 jatah penuh)
+            if ($jumlahHari > LeaveConstants::ANNUAL_QUOTA) {
+                $v->errors()->add(
+                    'tanggal_selesai',
+                    'Maksimal pengajuan cuti adalah ' .
+                    LeaveConstants::ANNUAL_QUOTA . ' hari sekaligus.'
+                );
+            }        
+        });        
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Constants\LeaveConstants;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,14 +15,14 @@ class StoreKaryawanRequest extends FormRequest
         'nama'       => 'required|string|max:100',
         'email'      => 'required|email|unique:karyawan,email',
         'password'   => 'required|string|min:8',
-        'role'       => ['required', Rule::in(['karyawan', 'admin'])],
+        'role'       => ['required', Rule::in(LeaveConstants::ALL_ROLES)],
 
         // departemen WAJIB jika role = karyawan
         // departemen BOLEH NULL jika role = admin
         'departemen' => [
             Rule::requiredIf(fn() => $this->input('role') === 'karyawan'),
             'nullable',
-            Rule::in(['Sewing', 'Cutting', 'Finishing', 'QA']),
+            Rule::in(LeaveConstants::DEPARTMENTS),
         ],
     ];
 }

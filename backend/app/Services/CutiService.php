@@ -2,28 +2,54 @@
 
 namespace App\Services;
 
+use App\Constants\LeaveConstants;
+use App\Exceptions\LeaveException;
 use App\Models\CutiKaryawan;
 use App\Models\JenisCuti;
 use App\Models\Karyawan;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CutiService
 {
     // ──────────────────────────────────────────────────────────────
-    // HELPER: Hitung jumlah hari (inklusif)
-    // Contoh: 10 Mar – 12 Mar = 3 hari
+    // UTILITIES
     // ──────────────────────────────────────────────────────────────
 
-    public function hitungHari(string $tanggalMulai, string $tanggalSelesai): int
+    /**
+     * Hitung jumlah hari cuti secara inklusif.
+     * Contoh: 10 Mar -> 12 Mar = 3 hari
+     * 
+     * @param string $mulai     Format: Y-m-d
+     * @param string $selesai   Format: Y-m-d
+     */
+    public function hitungHari(string $mulai, string $selesai): int
     {
-        return Carbon::parse($tanggalMulai)
-                     ->diffInDays(Carbon::parse($tanggalSelesai)) + 1;
+        return Carbon::parse($mulai)
+                     ->diffInDays(Carbon::parse($selesai)) + 1;
+    }
+
+    /**
+     * Validasi apakah karyawan bisa mengajukan cuti sejumlah hari.
+     * Lempar exception jika tidak bisa.
+     * 
+     * @throws \Exception
+     */
+    public function validasiSisaCuti(Karyawan $karyawan, JenisCuti $jenisCuti, int $jumlahHari): void
+    {
+        if ($jenisCuti->potong_jatah && !$karyawan->bisaSubmitCuti($jumlahHari)) {
+            throw new \Exception(
+                "Sisa cuti tidak mencukupi. " .
+                "Anda membutuhkan {$jumlahHari} hari, " .
+                "sisa cuti Anda {$karyawan->sisa_cuti} hari."
+            );
+        }
     }
 
     // ──────────────────────────────────────────────────────────────
-    // PENGAJUAN CUTI (oleh karyawan)
+    // KARYAWAN ACTIONS
     // ──────────────────────────────────────────────────────────────
 
     /**
@@ -36,12 +62,12 @@ class CutiService
      *
      * @throws \Exception
      */
-    public function ajukan(Karyawan $karyawan, array $data): CutiKaryawan
+    public function submit(Karyawan $karyawan, array $data): CutiKaryawan
     {
-        // Guard 1: hanya karyawan produksi yang bisa ajukan cuti
+        // Guard 1: hanya karyawan produksi yang bisa submit cuti
         if (! $karyawan->isKaryawanProduksi()) {
             throw new \Exception(
-                'Akun ini bukan karyawan produksi dan tidak dapat mengajukan cuti.'
+                'Akun ini bukan karyawan produksi dan tidak dapat mengsubmit cuti.'
             );
         }
 
@@ -52,7 +78,7 @@ class CutiService
         );
 
         // Guard 2: cek sisa cuti jika jenis cuti memotong jatah
-        if ($jenisCuti->potong_jatah && ! $karyawan->bisaAjukanCuti($jumlahHari)) {
+        if ($jenisCuti->potong_jatah && ! $karyawan->bisasubmitCuti($jumlahHari)) {
             throw new \Exception(
                 "Sisa cuti tidak mencukupi. " .
                 "Anda memiliki {$karyawan->sisa_cuti} hari, " .
@@ -80,7 +106,7 @@ class CutiService
         }
 
         // Semua guard lolos — simpan pengajuan
-        return CutiKaryawan::create([
+        $cuti = CutiKaryawan::create([
             'karyawan_id'     => $karyawan->id,
             'jenis_cuti_id'   => $jenisCuti->id,
             'tanggal_mulai'   => $data['tanggal_mulai'],
@@ -89,14 +115,73 @@ class CutiService
             'keterangan'      => $data['keterangan'] ?? null,
             'status'          => 'pending',
         ]);
+
+        // Logging
+        Log::info('Cuti diajukan', [
+            'karyawan'      => $karyawan->nik,
+            'jenis_cuti'    => $data['jenis_cuti_id'],
+            'tanggal'       => $data['tanggal_mulai'] . ' s/d ' . $data['tanggal_selesai'],
+            'jumlah_hari'   => $jumlahHari,
+        ]);
+
+        return $cuti;
     }
 
+    /**
+     * Batalkan pengajuan cuti (hanya boleh saat pending)
+     *
+     * @throws \Exception
+     */
+    public function cancel(CutiKaryawan $cuti, Karyawan $karyawan): void
+    {
+        // Guard 1: hanya pemilik pengajuan yang bisa membatalkan
+        if ($cuti->karyawan_id !== $karyawan->id) {
+            throw new \Exception(
+                'Anda tidak memiliki izin untuk membatalkan pengajuan ini.'
+            );
+        }
+
+        // Guard 2: hanya bisa batalkan jika masih pending
+        if (! $cuti->isPending()) {
+            throw new \Exception(
+                "Pengajuan yang sudah berstatus '{$cuti->status}' tidak dapat dibatalkan."
+            );
+        }
+
+        $cuti->forceDelete();
+    }
+
+    /**
+     * List pengajuan cuti milik karyawan tertentu, dengan filter opsional.
+     */
+    public function listByKaryawan(
+        Karyawan $karyawan,
+        ?string $status = null,
+        ?int $tahun = null,
+        int $perPage = 10
+    ): LengthAwarePaginator {
+        $query = CutiKaryawan::with(['jenisCuti', 'approvedBy'])
+            ->where('karyawan_id', $karyawan->id)
+            ->latest('created_at');
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        if ($tahun) {
+            $query->whereYear('tanggal_mulai', $tahun);
+        }
+
+        return $query->paginate($perPage);
+    }
+
+
     // ──────────────────────────────────────────────────────────────
-    // APPROVE CUTI (oleh admin)
+    // ADMIN ACTIONS
     // ──────────────────────────────────────────────────────────────
 
     /**
-     * Admin menyetujui pengajuan cuti.
+     * Approve pengajuan cuti.
      *
      * Jika jenis cuti potong_jatah = true, sisa cuti karyawan dikurangi.
      * Seluruh operasi dibungkus DB Transaction untuk atomicity.
@@ -144,16 +229,22 @@ class CutiService
             }
         });
 
+        // Logging
+        Log::info('Cuti disetujui', [
+            'cuti_id'       => $cuti->id,
+            'karyawan'      => $cuti->karyawan->nik,
+            'admin'         => $admin->nik,
+            'jumlah_hari'   => $cuti->jumlah_hari,
+            'jenis_cuti'    => $cuti->jenisCuti->nama,
+            'timestamp'     => now()->toDateTimeString(),
+        ]);
+
         // Refresh model agar data terbaru (setelah decrement)
         return $cuti->fresh(['karyawan', 'jenisCuti', 'approvedBy']);
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // REJECT CUTI (oleh admin)
-    // ──────────────────────────────────────────────────────────────
-
     /**
-     * Admin menolak pengajuan cuti.
+     * Reject pengajuan cuti.
      *
      * Sisa cuti tidak berubah karena belum pernah dipotong saat pengajuan.
      * Jika sebelumnya sudah di-approve lalu ingin di-reject
@@ -168,9 +259,7 @@ class CutiService
     ): CutiKaryawan {
         // Guard: tidak bisa reject yang sudah rejected
         if ($cuti->isRejected()) {
-            throw new \Exception(
-                'Pengajuan ini sudah ditolak sebelumnya.'
-            );
+            throw LeaveException::sudahDiproses('rejected');
         }
 
         DB::transaction(function () use ($cuti, $admin, $catatan) {
@@ -199,104 +288,45 @@ class CutiService
             }
         });
 
+        // Logging
+        Log::info('Cuti ditolak', [
+            'cuti_id'       => $cuti->id,
+            'karyawan'      => $cuti->karyawan->nik,
+            'admin'         => $admin->nik,
+            'catatan'       => $catatan,
+            'timestamp'     => now()->toDateTimeString(),
+        ]);
+
         return $cuti->fresh(['karyawan', 'jenisCuti', 'approvedBy']);
     }
-
-    // ──────────────────────────────────────────────────────────────
-    // BATALKAN CUTI (oleh karyawan sendiri)
-    // ──────────────────────────────────────────────────────────────
-
-    /**
-     * Karyawan membatalkan pengajuannya sendiri.
-     * Hanya boleh jika masih berstatus pending.
-     *
-     * @throws \Exception
-     */
-    public function batalkan(CutiKaryawan $cuti, Karyawan $karyawan): void
-    {
-        // Guard 1: hanya pemilik pengajuan yang bisa membatalkan
-        if ($cuti->karyawan_id !== $karyawan->id) {
-            throw new \Exception(
-                'Anda tidak memiliki izin untuk membatalkan pengajuan ini.'
-            );
-        }
-
-        // Guard 2: hanya bisa batalkan jika masih pending
-        if (! $cuti->isPending()) {
-            throw new \Exception(
-                "Pengajuan yang sudah berstatus '{$cuti->status}' tidak dapat dibatalkan."
-            );
-        }
-
-        $cuti->delete();
-    }
-
-    // ──────────────────────────────────────────────────────────────
-    // LIST CUTI (untuk karyawan — hanya milik sendiri)
-    // ──────────────────────────────────────────────────────────────
-
-    /**
-     * Ambil daftar cuti milik karyawan tertentu.
-     * Bisa difilter by status dan/atau tahun.
-     */
-    public function listByKaryawan(
-        Karyawan $karyawan,
-        ?string $status = null,
-        ?int $tahun = null,
-        int $perPage = 10
-    ): LengthAwarePaginator {
-        $query = CutiKaryawan::with(['jenisCuti', 'approvedBy'])
-            ->where('karyawan_id', $karyawan->id)
-            ->latest('created_at');
-
-        if ($status) {
-            $query->where('status', $status);
-        }
-
-        if ($tahun) {
-            $query->whereYear('tanggal_mulai', $tahun);
-        }
-
-        return $query->paginate($perPage);
-    }
-
-    // ──────────────────────────────────────────────────────────────
-    // LIST CUTI (untuk admin — semua karyawan)
-    // ──────────────────────────────────────────────────────────────
 
     /**
      * Ambil semua pengajuan cuti untuk halaman admin.
      * Bisa difilter by status, departemen, dan/atau tahun.
      */
-    public function listSemua(
+    public function listForAdmin(
         ?string $status = null,
         ?string $departemen = null,
         ?int $tahun = null,
         int $perPage = 15
     ): LengthAwarePaginator {
         $query = CutiKaryawan::with(['karyawan', 'jenisCuti', 'approvedBy'])
-            ->latest('created_at');
+            ->latest('cuti_karyawan.created_at');
 
         if ($status) {
-            $query->where('status', $status);
+            $query->status($status);
         }
 
         if ($departemen) {
-            $query->whereHas('karyawan', function ($q) use ($departemen) {
-                $q->where('departemen', $departemen);
-            });
+            $query->whereRelation('karyawan', 'departemen', $departemen);
         }
 
         if ($tahun) {
-            $query->whereYear('tanggal_mulai', $tahun);
+            $query->whereYear('cuti_karyawan.tanggal_mulai', $tahun);
         }
 
         return $query->paginate($perPage);
     }
-
-    // ──────────────────────────────────────────────────────────────
-    // REKAP SISA CUTI (untuk admin — dashboard)
-    // ──────────────────────────────────────────────────────────────
 
     /**
      * Ringkasan statistik cuti per departemen.
@@ -323,17 +353,13 @@ class CutiService
         return $rekap;
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // RESET JATAH CUTI TAHUNAN (dijalankan awal tahun)
-    // ──────────────────────────────────────────────────────────────
-
     /**
      * Reset sisa_cuti semua karyawan produksi ke 12 di awal tahun baru.
      * Dipanggil via Artisan command atau scheduler.
      */
     public function resetJatahTahunan(): int
     {
-        return Karyawan::whereNotNull('departemen')
-                        ->update(['sisa_cuti' => 12]);
+        return Karyawan::where('role', LeaveConstants::ROLE_KARYAWAN)
+                        ->update(['sisa_cuti' => LeaveConstants::ANNUAL_QUOTA]);
     }
 }

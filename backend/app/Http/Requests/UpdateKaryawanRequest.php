@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Constants\LeaveConstants;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Contracts\Validation\Validator as ValidatorInstance;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
@@ -45,7 +47,7 @@ class UpdateKaryawanRequest extends FormRequest
                     return $roleAktif === 'karyawan';
                 }),
                 'nullable',
-                Rule::in(['Sewing', 'Cutting', 'Finishing', 'QA']),
+                Rule::in(LeaveConstants::DEPARTMENTS),
             ],
 
             'email' => [
@@ -64,7 +66,7 @@ class UpdateKaryawanRequest extends FormRequest
                 'sometimes',
                 'integer',
                 'min:0',
-                'max:12',
+                'max:' . LeaveConstants::ANNUAL_QUOTA
             ],
         ];
     }
@@ -90,5 +92,24 @@ class UpdateKaryawanRequest extends FormRequest
             'message' => 'Data karyawan tidak valid.',
             'errors' => $validator->errors(),
         ], 422));
+    }
+
+    public function withValidator(ValidatorInstance $validator): void
+    {
+        $validator->after(function (ValidatorInstance $v) {
+            
+            $karyawanId = $this->route('karyawan');
+
+            // Admin tidak boleh ubah role dirinya sendiri
+            if (
+                $this->has('role') &&
+                (int)$karyawanId === $this->user()->id
+            ) {
+                $v->errors()->add(
+                    'role',
+                    'Anda tidak dapat mengubah role akun Anda sendiri.'
+                );
+            }
+        });
     }
 }

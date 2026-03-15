@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Builder;
-use Carbon\Carbon;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CutiKaryawan extends Model
 {
+    use HasFactory;
+    use SoftDeletes;
+
     protected $table = 'cuti_karyawan';
 
     protected $fillable = [
@@ -104,9 +108,7 @@ class CutiKaryawan extends Model
      */
     public function scopeDepartemen(Builder $query, string $dept): Builder
     {
-        return $query->whereHas('karyawan', function (Builder $q) use ($dept) {
-            $q->where('departemen', $dept);
-        });
+        return $query->whereRelation('karyawan', 'departemen', $dept);
     }
 
     // ── ACCESSORS ─────────────────────────────────────────────

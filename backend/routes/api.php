@@ -1,16 +1,17 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\JenisCutiController;
+use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Karyawan\JenisCutiController;
 
 // ────────────────────────────────────────────────────────────────
 // PUBLIC ROUTES - tidak perlu token
 // ────────────────────────────────────────────────────────────────
 Route::prefix('auth')->name('auth.')->group(function () {
 
-    Route::post('/login', [AuthController::class, 'login'])
-        ->name('login');
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/login', [AuthController::class, 'login'])->name('login');
+    });
 
     // Health check - Cek API hidup
     Route::get('/ping', fn()=>response()->json([

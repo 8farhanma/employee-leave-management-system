@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Auth;
 
+use App\Constants\LeaveConstants;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterKaryawanRequest;
 use App\Http\Resources\KaryawanResource;
@@ -30,7 +31,7 @@ class AuthController extends Controller
             'email'         => strtolower($request->email),
             'password'      => Hash::make($request->password),
             'role'          => $request->role ?? 'karyawan',
-            'sisa_cuti'     => $request->sisa_cuti ?? 12,
+            'sisa_cuti'     => $request->sisa_cuti ?? LeaveConstants::ANNUAL_QUOTA,
 
         ]);
 
@@ -95,14 +96,11 @@ class AuthController extends Controller
     
     public function logout(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $nama = $user->nama;
-
-        // Hapus semua token milik user ini — paling reliable di test & production
-        $user->tokens()->delete();
+        $karyawan = $request->user();
+        $karyawan->currentAccessToken()->delete();
 
         return $this->successResponse(
-            message: "Sampai jumpa, {$nama}! Anda berhasil logout."
+            message: "Sampai jumpa, {$karyawan->nama}! Anda berhasil logout."
             );
     }
 
@@ -113,23 +111,23 @@ class AuthController extends Controller
     
     public function me(Request $request): JsonResponse
     {
-        $karyawan = $request->user();
-
-        $totalPengajuan = $karyawan->cutiKaryawan()->count();
-        $totalPending   = $karyawan->cutiKaryawan()->where('status', 'pending')->count();
-        $totalApproved  = $karyawan->cutiKaryawan()->where('status', 'approved')->count();
-        $totalRejected  = $karyawan->cutiKaryawan()->where('status', 'rejected')->count();
+        $karyawan = $request->user()->loadCount([
+        'cutiKaryawan as total_pengajuan',
+        'cutiKaryawan as total_pending' => fn($q) => $q->where('status', 'pending'),
+        'CutiKaryawan as total_approved'=> fn($q) => $q->where('status', 'approved'),
+        'CutiKaryawan as total_rejected'=> fn($q) => $q->where('status', 'rejected'),
+        ]);
 
         return $this->successResponse([
             'profil'    => new KaryawanResource($karyawan),
             'statistik' => [
-                'total_pengajuan' => $totalPengajuan,
-                'total_pending'   => $totalPending,
-                'total_approved'  => $totalApproved,
-                'total_rejected'  => $totalRejected,
+                'total_pengajuan' => $karyawan->total_pengajuan,
+                'total_pending'   => $karyawan->total_pending,
+                'total_approved'  => $karyawan->total_approved,
+                'total_rejected'  => $karyawan->total_rejected,
                 'sisa_cuti'       => $karyawan->sisa_cuti,
-                'jatah_tahunan'   => 12,
-                'cuti_terpakai'   => 12 - $karyawan->sisa_cuti,
+                'jatah_tahunan'   => LeaveConstants::ANNUAL_QUOTA,
+                'cuti_terpakai'   => LeaveConstants::ANNUAL_QUOTA - $karyawan->sisa_cuti,
             ],
         ]);
     }

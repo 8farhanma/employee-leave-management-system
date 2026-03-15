@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
 class Karyawan extends Authenticatable
@@ -132,7 +132,7 @@ class Karyawan extends Authenticatable
      */
     public function isKaryawanProduksi(): bool
     {
-        return $this->departemen !== null;
+        return !$this->isAdmin() && !is_null($this->departemen);
     }
 
     /**
@@ -152,12 +152,17 @@ class Karyawan extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
     /**
      * Admin bisa approve/reject cuti siapa saja
      * Tapi jika admin juga karyawan produksi,
      * dia tetap bisa ajukan cuti sendiri.
      */
-    public function bisaAjukanCuti(int $jumlahHari): bool
+    public function bisaSubmitCuti(int $jumlahHari): bool
     {
         // Admin non-produksi tidak punya jatah cuti
         if (! $this->isKaryawanProduksi()) return false;
