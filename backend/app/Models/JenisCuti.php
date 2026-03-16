@@ -19,7 +19,7 @@ class JenisCuti extends Model
         'keterangan',
     ];
 
-    protected $cast = [
+    protected $casts = [
         'potong_jatah' => 'boolean',
     ];
 

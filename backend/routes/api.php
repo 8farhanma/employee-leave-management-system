@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\CutiController;
 use App\Http\Controllers\Api\Karyawan\JenisCutiController;
 
 // ────────────────────────────────────────────────────────────────
@@ -41,6 +42,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{jenisCuti}', [JenisCutiController::class, 'show'])->name('show');
     });
 
+    // Cuti Karyawan
+    Route::prefix('cuti')->name('cuti.')->group(function () {
+        Route::post('/', [CutiController::class, 'store'])->name('store');
+
+        // Route::get('/', [CutiController::class, 'index'])->name('index');
+        // Route::get('/{id}', [CutiController::class, 'show'])->name('show');
+        // Route::delete('/{id}', [CutiController::class, 'destroy'])->name('destroy');
+    });
+
     // ────────────────────────────────────────────────────────────────
     // ADMIN ONLY
     // ────────────────────────────────────────────────────────────────
@@ -50,7 +60,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/karyawan/register', [AuthController::class, 'register'])
             ->name('karyawan.register');
 
-        // Placeholder — akan diisi Hari 6–13
         // Route::apiResource('cuti', AdminCutiController::class);
         // Route::apiResource('karyawan', AdminKaryawanController::class);
     });
@@ -58,6 +67,5 @@ Route::middleware('auth:sanctum')->group(function () {
     // ────────────────────────────────────────────────────────────────
     // KARYAWAN ROUTES
     // ────────────────────────────────────────────────────────────────
-    // Placeholder — akan diisi Hari 8–10
     // Route::apiResource('cuti', CutiController::class);
 });

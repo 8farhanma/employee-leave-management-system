@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Constants\LeaveConstants;
 use App\Models\CutiKaryawan;
+use App\Models\JenisCuti;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
@@ -34,7 +35,7 @@ class StoreLeaveRequest extends FormRequest
                 'required',
                 'date',
                 'date_format:Y-m-d', 
-                'after_or_equal:today', // Tanggal mulai harus hari ini atau setelahnya
+                'after_or_equal:today' . now('Asia/Jakarta')->format('Y-m-d'), // Tanggal mulai harus hari ini atau setelahnya
             ],
 
             'tanggal_selesai' => [
@@ -48,6 +49,7 @@ class StoreLeaveRequest extends FormRequest
             'keterangan' => [
                 'nullable',
                 'string',
+                'min:3',
                 'max:500',
             ],
         ];
@@ -104,59 +106,27 @@ class StoreLeaveRequest extends FormRequest
         );
     }
 
+    /**
+     * Validasi tambahan setelah semua rule dasar lolos.
+     * Di sini dilakukan pengecekan logika bisnis yang butuh query DB.
+     */
     public function withValidator(ValidatorInstance $validator): void
     {
         $validator->after(function (ValidatorInstance $v) {
 
-            /**
-             * Validasi overlap tanggal
-             */
-
-            // Hanya cek jika tanggal valid dulu
+            // Hanya cek jika tanggal valid terlebih dahulu
             if ($v->errors()->hasAny(['tanggal_mulai', 'tanggal_selesai'])) {
                 return;
             }
 
-            $overlap = CutiKaryawan::where('karyawan_id', $this->user()->id)
-                ->whereIn('status', [
-                    LeaveConstants::STATUS_PENDING,
-                    LeaveConstants::STATUS_APPROVED,
-                ])
-                ->where(function ($q) {
-                    // Cek overlap: ada pengajuan lain yang tanggalnya bertabrakan
-                    $q->whereBetween('tanggal_mulai', [
-                            $this->tanggal_mulai,
-                            $this->tanggal_selesai,
-                        ])
-                        ->orWhereBetween('tanggal_selesai', [
-                            $this->tanggal_mulai,
-                            $this->tanggal_selesai,
-                        ])
-                        ->orWhere(function ($q2) {
-                            // Kasus: request baru membungkus request lama
-                            $q2->where('tanggal_mulai', '<=', $this->tanggal_mulai)
-                            ->where('tanggal_selesai', '>=', $this->tanggal_selesai);
-                        });
-                })
-                ->exists();
-            
-            if ($overlap) {
-                $v->errors()->add(
-                    'tanggal_mulai',
-                    'Terdapat pengajuan cuti lain yang tanggalnya bertabrakan ' .
-                    'dengan periode ini.'
-                );
-            }  
-            
-            /**
-             * Batas maksimum hari per pengajuan
-             */
-            if ($v->errors()->hasAny(['tanggal_mulai', 'tanggal_selesai'])) {
-                return;
-            }
+            $mulai   = $this->tanggal_mulai;
+            $selesai = $this->tanggal_selesai;
 
-            $jumlahHari = Carbon::parse($this->tanggal_mulai)
-                                ->diffInDays($this->tanggal_selesai) + 1;
+            // ────────────────────────────────────────────────────────────────
+            // Validasi 1 : Batas maksimum hari per pengajuan
+            // ──────────────────────────────────────────────────────────────── 
+            $jumlahHari = Carbon::parse($mulai)
+                                ->diffInDays($selesai) + 1;
 
             // Maksimum 12 hari per pengajuan (= 1 jatah penuh)
             if ($jumlahHari > LeaveConstants::ANNUAL_QUOTA) {
@@ -165,7 +135,49 @@ class StoreLeaveRequest extends FormRequest
                     'Maksimal pengajuan cuti adalah ' .
                     LeaveConstants::ANNUAL_QUOTA . ' hari sekaligus.'
                 );
-            }        
+                // Stop di sini - tidak perlu cek overlap jika durasi sudah invalid
+                return;
+            }
+            
+            // ────────────────────────────────────────────────────────────────
+            // Validasi 2 : Cek sisa cuti mencukupi
+            // ────────────────────────────────────────────────────────────────
+            if (!$v->errors()->has('jenis_cuti_id')) {
+                $jenisCuti = JenisCuti::find($this->jenis_cuti_id);
+
+                if ($jenisCuti?->potong_jatah) {
+                    $karyawan = $this->user();
+
+                    if ($karyawan->sisa_cuti < $jumlahHari) {
+                        $v->errors()->add(
+                            'jumlah_hari',
+                            "Sisa cuti Anda tidak mencukupi. " . 
+                            "Dibutuhkan: {$jumlahHari} hari, " .
+                            "tersisa: {$karyawan->sisa_cuti} hari."
+                        );
+                    }
+                }
+            }
+
+            // ────────────────────────────────────────────────────────────────
+            // Validasi 3 : Overlap tanggal
+            // ────────────────────────────────────────────────────────────────
+            $overlap = CutiKaryawan::where('karyawan_id', $this->user()->id)
+                ->whereIn('status', [
+                    LeaveConstants::STATUS_PENDING,
+                    LeaveConstants::STATUS_APPROVED,
+                ])
+                ->where('tanggal_mulai', '<=', $selesai)    // lama mulai sebelum/saat baru selesai
+                ->where('tanggal_selesai', '>=', $mulai)    // lama selesai setelah/saat baru mulai
+                ->exists();
+            
+            if ($overlap) {
+                $v->errors()->add(
+                    'tanggal_mulai',
+                    'Terdapat pengajuan cuti lain yang tanggalnya bertabrakan ' .
+                    'dengan periode ini. Periksa daftar pengajuan Anda.'
+                );
+            }       
         });        
     }
 }

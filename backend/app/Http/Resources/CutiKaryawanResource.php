@@ -8,19 +8,28 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class CutiKaryawanResource extends JsonResource
 {
     /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
+     * Data tambahan yang bisa di-inject dari controller.
+     * Contoh: sisa_cuti karyawan setelah transaksi.
      */
+    public array $additional_data = [];
+
+    public function withAdditional(array $data): static
+    {
+        $this->additional_data = $data;
+        return $this;
+    }
+
     public function toArray(Request $request): array
     {
-        return [
+        $base = [
             'id'                => $this->id,
             'karyawan'          => new KaryawanResource($this->whenLoaded('karyawan')),
+            'jenis_cuti'        => new JenisCutiResource($this->whenLoaded('jenisCuti')),
             'tanggal_mulai'     => $this->tanggal_mulai->format('Y-m-d'),
             'tanggal_selesai'   => $this->tanggal_selesai->format('Y-m-d'),
             'jumlah_hari'       => $this->jumlah_hari,
-            'periode_label'     => $this->periode_label, // "10 Mar - 12 Mar (3 hari)"
+            'periode_label'     => $this->periode_label,
+            'keterangan'        => $this->keterangan,
             'status'            => $this->status,
             'status_label'      => $this->status_label, // "Disetujui", "Ditolak", "Menunggu"
             'catatan_admin'     => $this->catatan_admin,
@@ -32,7 +41,9 @@ class CutiKaryawanResource extends JsonResource
             }),
             'approved_at'       => $this->approved_at?->format('Y-m-d H:i:s'),
             'created_at'        => $this->created_at->format('Y-m-d H:i:s'),
-            'jenis_cuti'        => new JenisCutiResource($this->whenLoaded('jenisCuti')),
         ];
+
+        // Merge data tambahan jika ada (misal: sisa_cuti_terkini)
+        return array_merge($base, $this->additional_data);
     }
 }

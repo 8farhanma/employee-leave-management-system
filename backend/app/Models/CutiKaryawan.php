@@ -133,8 +133,8 @@ class CutiKaryawan extends Model
      */
     public function getPeriodeLabelAttribute(): string
     {
-        $mulai   = $this->tanggal_mulai->isoformat('D MMM YYYY') ?? '-';
-        $selesai = $this->tanggal_selesai->isoformat('D MMM YYYY') ?? '-';
+        $mulai   = $this->tanggal_mulai->isoformat('DD MMM YYYY') ?? '-';
+        $selesai = $this->tanggal_selesai->isoformat('DD MMM YYYY') ?? '-';
 
         return "{$mulai} - {$selesai} ({$this->jumlah_hari} hari)";
     }
