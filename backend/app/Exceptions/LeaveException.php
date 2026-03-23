@@ -2,7 +2,9 @@
 
 namespace App\Exceptions;
 
-class LeaveException extends \RuntimeException
+use RuntimeException;
+
+class LeaveException extends RuntimeException
 {
     public static function sudahDiproses(string $status): self
     {

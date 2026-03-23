@@ -22,6 +22,7 @@ class CutiKaryawan extends Model
         'tanggal_selesai',
         'jumlah_hari',
         'keterangan',
+        'dokumen_path',
         'status',
         'catatan_admin',
         'approved_by',
@@ -138,8 +139,31 @@ class CutiKaryawan extends Model
 
         return "{$mulai} - {$selesai} ({$this->jumlah_hari} hari)";
     }
+
+    /**
+     * Full URL dokumen yang bisa diakses publik.
+     * Null jika tidak ada dokumen.
+     * Usage: $cuti->dokumen_url
+     */
+    public function getDokumenUrlAttribute(): ?string
+    {
+        if (!$this->dokumen_path) return null;
+
+        return asset('storage/' . $this->dokumen_path);
+    }
     
-        // ── HELPER METHODS ────────────────────────────────────────────
+    /**
+     * Nama file dokumen saja (tanpa path)
+     * Usage: $cuti->dokumen_nama
+     */
+    public function getDokumenNamaAttribute(): ?string
+    {
+        if (!$this->dokumen_path) return null;
+
+        return basename($this->dokumen_path);
+    }
+
+    // ── HELPER METHODS ────────────────────────────────────────────
 
     public function isPending(): bool
     {

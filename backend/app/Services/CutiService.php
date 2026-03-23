@@ -8,38 +8,154 @@ use App\Models\CutiKaryawan;
 use App\Models\JenisCuti;
 use App\Models\Karyawan;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class CutiService
 {
     // ──────────────────────────────────────────────────────────────
-    // UTILITIES
+    // BAGIAN 1 - CARBON UTILITIES
     // ──────────────────────────────────────────────────────────────
 
     /**
      * Hitung jumlah hari cuti secara inklusif.
-     * Contoh: 10 Mar -> 12 Mar = 3 hari
      * 
-     * @param string $mulai     Format: Y-m-d
-     * @param string $selesai   Format: Y-m-d
+     * Contoh: 10 Mar -> 10 Mar = 1 hari
+     * Contoh: 10 Mar -> 12 Mar = 3 hari
+     * Contoh: 28 Mar -> 03 Apr = 7 hari
+     * 
+     * Rumus: diffInDays(start, end) + 1
      */
     public function hitungHari(string $mulai, string $selesai): int
     {
         return Carbon::parse($mulai)
-                     ->diffInDays(Carbon::parse($selesai)) + 1;
+                     ->startOfDay()
+                     ->diffInDays(Carbon::parse($selesai)->startOfDay()) + 1;
     }
 
     /**
-     * Validasi apakah karyawan bisa mengajukan cuti sejumlah hari.
-     * Lempar exception jika tidak bisa.
+     * Breakdown detail periode cuti menggunakan CarbonPeriod.
+     * 
+     * Berguna untuk debugging atau menampilkan kalender cuti.
+     * Return array berisi setiap tanggal dalam periode.
+     * 
+     * @return array<string> Format: ['2026-04-07', '2026-04-08', ...]
+     */
+    public function breakdownHari(string $mulai, string $selesai): array
+    {
+        $period = CarbonPeriod::create(
+            Carbon::parse($mulai)->startOfDay(),
+            Carbon::parse($selesai)->startOfDay()
+        );
+
+        return collect($period)
+            ->map(fn(Carbon $date) => $date->format('Y-m-d'))
+            ->toArray();
+    }
+
+    /**
+     * Hitung berapa hari tersisa hingga tanggal mulai cuti.
+     * Berguna untuk fitur notifikasi / reminder.
+     * 
+     * @return int Negatif jika tanggal sudah lewat
+     */
+    public function hariMenujuCuti(string $tanggalMulai): int
+    {
+        $tz = 'Asia/Jakarta';
+
+        return (int) now('Asia/Jakarta')
+            ->startOfDay()
+            ->diffInDays(
+                // Paksa parse dengan timezone yang sama
+                Carbon::parse($tanggalMulai, $tz)->startOfDay(),
+                false   // false = signed (bisa negatif)
+            );
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // BAGIAN 2 - OVERLAP DETECTION
+    // ────────────────────────────────────────────────────────────────
+    
+    /**
+     * Cek apakah ada pengajuan cuti yang tumpang tindih dengan range baru.
+     * 
+     * Dua range dikatakan overlap jika:
+     * start_A <= end_B AND end_A >= start_B
+     * 
+     * kondisi yang dicek:
+     * - Status pending ATAU approved
+     * - Milik karyawan yang sama
+     * - Tanggal bertabrakan
+     */
+    public function cekOverlap(
+        Karyawan $karyawan,
+        string $tanggalMulai,
+        string $tanggalSelesai,
+        ?int $excludeId = null      // untuk update: exclude ID pengajuan ini sendiri
+    ): bool {
+        $query = CutiKaryawan::where('karyawan_id', $karyawan->id)
+            ->whereIn('status', [
+                LeaveConstants::STATUS_PENDING,
+                LeaveConstants::STATUS_APPROVED,
+            ])
+            // Kondisi overlap: start_A <= end_B AND end_A >= start_B
+            ->where('tanggal_mulai', '<=', $tanggalSelesai)
+            ->where('tanggal_selesai', '>=', $tanggalMulai);
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        return $query->exists();
+    }
+
+    /**
+     * Ambil detail pengajuan yang overlap (untuk pesan error yang informatif).
+     * 
+     * @return CutiKaryawan|null
+     */
+    public function getOverlapDetail(
+        Karyawan $karyawan,
+        string $tanggalMulai,
+        string $tanggalSelesai,
+        ?int $excludeId = null
+    ): ?CutiKaryawan {
+        $query = CutiKaryawan::with(['jenisCuti'])
+            ->where('karyawan_id', $karyawan->id)
+            ->whereIn('status', [
+                LeaveConstants::STATUS_PENDING,
+                LeaveConstants::STATUS_APPROVED,
+            ])
+            ->where('tanggal_mulai', '<=', $tanggalSelesai)
+            ->where('tanggal_selesai', '>=', $tanggalMulai);
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        return $query->first();
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // BAGIAN 3 - VALIDASI BISNIS
+    // ────────────────────────────────────────────────────────────────
+
+    /**
+     * Validasi sisa cuti mencukupi.
      * 
      * @throws \Exception
      */
-    public function validasiSisaCuti(Karyawan $karyawan, JenisCuti $jenisCuti, int $jumlahHari): void
-    {
-        if ($jenisCuti->potong_jatah && !$karyawan->bisaSubmitCuti($jumlahHari)) {
+    public function validasiSisaCuti(
+        Karyawan $karyawan, 
+        JenisCuti $jenisCuti, 
+        int $jumlahHari
+    ): void {
+        if ($jenisCuti->potong_jatah && $karyawan->sisa_cuti < $jumlahHari) {
             throw new \Exception(
                 "Sisa cuti tidak mencukupi. " .
                 "Anda membutuhkan {$jumlahHari} hari, " .
@@ -48,23 +164,101 @@ class CutiService
         }
     }
 
+    /**
+     * Validasi tidak ada overlap dengan pengajuan aktif lainnya.
+     * 
+     * @throws \Exception
+     */
+    public function validasiTidakOverlap(
+        Karyawan $karyawan,
+        string $tanggalMulai,
+        string $tanggalSelesai,
+        ?int $excludeId = null,
+    ): void {
+        $overlap = $this->getOverlapDetail(
+            $karyawan,
+            $tanggalMulai,
+            $tanggalSelesai,
+            $excludeId
+        );
+
+        if ($overlap) {
+            throw new \Exception(
+                "Tanggal cuti bertabrakan dengan pengajuan yang sudah ada. " .
+                "Pengajuan aktif: {$overlap->periode_label} " .
+                "(Status: {$overlap->status})."
+            );
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // BAGIAN 4 - FILE UPLOAD (change request #001)
+    // ────────────────────────────────────────────────────────────────
+    
+    /**
+     * Simpan file dokumen pendukung ke storage.
+     * 
+     * Nama file    : {karyawan_id}_{timestamp}_{random}.{ext}
+     * Lokasi       : storage/app/public/dokumen-cuti/
+     * 
+     * @throws \Exception jika upload gagal
+     */
+    public function simpanDokumen(UploadedFile $file, int $karyawanId): string
+    {
+        $ekstensi = $file->getClientOriginalExtension();
+        $namaFile = implode('_', [
+            $karyawanId,
+            now()->format('Ymd_His'),
+            Str::random(8),
+        ]) . '.' . strtolower($ekstensi);
+
+        $path = $file->storeAs(
+            LeaveConstants::DOKUMEN_STORAGE_FOLDER,
+            $namaFile,
+            'public'
+        );
+
+        if (!$path) {
+            throw new \Exception('Gagal menyimpan dokumen. Silakan coba lagi.');
+        }
+
+        return $path;
+    }
+
+    /**
+     * Hapus file dokumen dari storage.
+     * Tidak throw jika file tidak ada (sudah terhapus sebelumnya)
+     */
+    public function hapusDokumen(?string $dokumenPath): void
+    {
+        if ($dokumenPath &&  Storage::disk('public')->exists($dokumenPath)) {
+            Storage::disk('public')->delete($dokumenPath);
+        }
+    }
+
     // ──────────────────────────────────────────────────────────────
-    // KARYAWAN ACTIONS
+    // BAGIAN 5 - KARYAWAN ACTIONS
     // ──────────────────────────────────────────────────────────────
 
     /**
      * Buat pengajuan cuti baru.
      *
-     * Aturan bisnis yang dicek di sini:
-     * - Karyawan harus karyawan produksi (punya departemen)
-     * - Jika jenis cuti potong_jatah = true, sisa cuti harus cukup
-     * - Tidak ada pengajuan pending yang tumpang-tindih tanggalnya
+     * Flow:
+     * 1. Ambil jenis cuti dari DB
+     * 2. Hitung jumlah hari (inklusif)
+     * 3. Validasi sisa cuti
+     * 4. Validasi tidak overlap
+     * 5. Handle upload dokumen jika ada
+     * 6. Simpan ke DB
      *
      * @throws \Exception
      */
-    public function submit(Karyawan $karyawan, array $data): CutiKaryawan
-    {
-        // Guard 1: hanya karyawan produksi yang bisa submit cuti
+    public function submit(
+        Karyawan $karyawan,
+        array $data,
+        ?UploadedFile $dokumen = null
+    ): CutiKaryawan {
+
         if (! $karyawan->isKaryawanProduksi()) {
             throw new \Exception(
                 'Akun ini bukan karyawan produksi dan tidak dapat mengsubmit cuti.'
@@ -77,35 +271,22 @@ class CutiService
             $data['tanggal_selesai']
         );
 
-        // Guard 2: cek sisa cuti jika jenis cuti memotong jatah
-        if ($jenisCuti->potong_jatah && ! $karyawan->bisasubmitCuti($jumlahHari)) {
-            throw new \Exception(
-                "Sisa cuti tidak mencukupi. " .
-                "Anda memiliki {$karyawan->sisa_cuti} hari, " .
-                "pengajuan membutuhkan {$jumlahHari} hari."
-            );
+        // Validasi sisa cuti
+        $this->validasiSisaCuti($karyawan, $jenisCuti, $jumlahHari);
+
+        // Validasi overlap
+        $this->validasiTidakOverlap(
+            $karyawan,
+            $data['tanggal_mulai'],
+            $data['tanggal_selesai']
+        );
+
+        // Upload dokumen jika ada
+        $dokumenPath = null;
+        if ($dokumen) {
+            $dokumenPath = $this->simpanDokumen($dokumen, $karyawan->id);
         }
 
-        // Guard 3: cek tumpang-tindih dengan pengajuan yang sudah ada
-        // (pending atau approved — bukan rejected)
-        $tumpangTindih = CutiKaryawan::where('karyawan_id', $karyawan->id)
-            ->whereIn('status', ['pending', 'approved'])
-            ->where(function ($query) use ($data) {
-                // Overlap terjadi jika:
-                // tanggal_mulai_baru <= tanggal_selesai_lama
-                // DAN tanggal_selesai_baru >= tanggal_mulai_lama
-                $query->where('tanggal_mulai', '<=', $data['tanggal_selesai'])
-                      ->where('tanggal_selesai', '>=', $data['tanggal_mulai']);
-            })
-            ->exists();
-
-        if ($tumpangTindih) {
-            throw new \Exception(
-                'Tanggal yang dipilih bertabrakan dengan pengajuan cuti Anda yang sudah ada.'
-            );
-        }
-
-        // Semua guard lolos — simpan pengajuan
         $cuti = CutiKaryawan::create([
             'karyawan_id'     => $karyawan->id,
             'jenis_cuti_id'   => $jenisCuti->id,
@@ -113,7 +294,8 @@ class CutiService
             'tanggal_selesai' => $data['tanggal_selesai'],
             'jumlah_hari'     => $jumlahHari,
             'keterangan'      => $data['keterangan'] ?? null,
-            'status'          => 'pending',
+            'dokumen_path'    => $dokumenPath,
+            'status'          => LeaveConstants::STATUS_PENDING,
         ]);
 
         // Logging
@@ -128,7 +310,8 @@ class CutiService
     }
 
     /**
-     * Batalkan pengajuan cuti (hanya boleh saat pending)
+     * Batalkan pengajuan cuti (hanya boleh saat pending).
+     * Hapus dokumen dari storage jika ada.
      *
      * @throws \Exception
      */
@@ -148,6 +331,9 @@ class CutiService
             );
         }
 
+        // Hapus dokumen dari storage sebelum delete record
+        $this->hapusDokumen($cuti->dokumen_path);
+
         $cuti->forceDelete();
     }
 
@@ -162,10 +348,10 @@ class CutiService
     ): LengthAwarePaginator {
         $query = CutiKaryawan::with(['jenisCuti', 'approvedBy'])
             ->where('karyawan_id', $karyawan->id)
-            ->latest('created_at');
+            ->orderBy('created_at', 'desc');
 
-        if ($status) {
-            $query->where('status', $status);
+        if ($status && in_array($status, LeaveConstants::ALL_STATUSES)) {
+            $query->status($status);
         }
 
         if ($tahun) {
@@ -177,7 +363,7 @@ class CutiService
 
 
     // ──────────────────────────────────────────────────────────────
-    // ADMIN ACTIONS
+    // BAGIAN 6 - ADMIN ACTIONS
     // ──────────────────────────────────────────────────────────────
 
     /**
@@ -196,7 +382,8 @@ class CutiService
         // Guard: hanya pengajuan pending yang bisa di-approve
         if (! $cuti->isPending()) {
             throw new \Exception(
-                "Pengajuan ini sudah berstatus '{$cuti->status}' dan tidak dapat diproses ulang."
+                "Hanya pengajuan berstatus pending yang dapat disetujui. " .
+                "Status saat ini: {$cuti->status}."
             );
         }
 
@@ -204,7 +391,7 @@ class CutiService
 
             // Update status pengajuan
             $cuti->update([
-                'status'        => 'approved',
+                'status'        => LeaveConstants::STATUS_APPROVED,
                 'catatan_admin' => $catatan,
                 'approved_by'   => $admin->id,
                 'approved_at'   => now(),
@@ -262,13 +449,12 @@ class CutiService
             throw LeaveException::sudahDiproses('rejected');
         }
 
-        DB::transaction(function () use ($cuti, $admin, $catatan) {
+        $wasApproved = $cuti->isApproved();
 
-            $sudahApproved = $cuti->isApproved();
-
+        DB::transaction(function () use ($cuti, $admin, $catatan, $wasApproved) {
             // Update status pengajuan
             $cuti->update([
-                'status'        => 'rejected',
+                'status'        => LeaveConstants::STATUS_REJECTED,
                 'catatan_admin' => $catatan,
                 'approved_by'   => $admin->id,
                 'approved_at'   => now(),
@@ -276,7 +462,7 @@ class CutiService
 
             // Jika sebelumnya sudah approved dan jenis cuti potong jatah,
             // kembalikan sisa cuti karyawan
-            if ($sudahApproved && $cuti->jenisCuti->potong_jatah) {
+            if ($wasApproved && $cuti->jenisCuti->potong_jatah) {
                 $cuti->karyawan()->lockForUpdate()->first();
 
                 $cuti->karyawan->increment('sisa_cuti', $cuti->jumlah_hari);
@@ -307,22 +493,23 @@ class CutiService
     public function listForAdmin(
         ?string $status = null,
         ?string $departemen = null,
-        ?int $tahun = null,
+        ?string $dari = null,
+        ?string $sampai = null,
         int $perPage = 15
     ): LengthAwarePaginator {
         $query = CutiKaryawan::with(['karyawan', 'jenisCuti', 'approvedBy'])
-            ->latest('cuti_karyawan.created_at');
+            ->orderBy('created_at', 'desc');
 
-        if ($status) {
+        if ($status && in_array($status, LeaveConstants::ALL_STATUSES)) {
             $query->status($status);
         }
 
-        if ($departemen) {
-            $query->whereRelation('karyawan', 'departemen', $departemen);
+        if ($departemen && in_array($departemen, LeaveConstants::DEPARTMENTS)) {
+            $query->departemen($departemen);
         }
 
-        if ($tahun) {
-            $query->whereYear('cuti_karyawan.tanggal_mulai', $tahun);
+        if ($dari && $sampai) {
+            $query->dalamPeriode($dari, $sampai);
         }
 
         return $query->paginate($perPage);

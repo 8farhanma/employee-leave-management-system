@@ -8,7 +8,6 @@ use App\Http\Resources\CutiKaryawanResource;
 use App\Http\Traits\ApiResponseTrait;
 use App\Services\CutiService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class CutiController extends Controller
 {
@@ -28,9 +27,18 @@ class CutiController extends Controller
         try {
             $karyawan = $request->user();
 
+            // Ambil file dokumen jika ada (bisa null)
+            $dokumen = $request->hasFile('dokumen')
+                ? $request->file('dokumen')
+                : null;
+
             // Buat pengajuan cuti melalui service
             // Service akan: hitung hari, validasi sisa cuti, simpan ke DB
-            $cuti = $this->cutiService->submit($karyawan, $request->validated());
+            $cuti = $this->cutiService->submit(
+                $karyawan, 
+                $request->validated(),
+                $dokumen
+            );
 
             // Load relasi untuk response
             $cuti->load(['jenisCuti']);

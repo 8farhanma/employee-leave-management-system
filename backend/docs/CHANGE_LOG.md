@@ -1,28 +1,35 @@
-## Template Change Request #001 — [Tanggal]
+## Change Request #001 — [17 Maret 2026]
 
-**Permintaan:** Approval 2 level (Supervisor + HRD)
+**Permintaan:** Aturan keterangan & dokumen per jenis cuti
+**Status:** Diterima & dikerjakan Hari 9
+
+┌─────────────────┬──────────────┬──────────────┐
+│ Jenis Cuti      │ Keterangan   │ Dokumen      │
+├─────────────────┼──────────────┼──────────────┤
+│ Cuti Tahunan    │ WAJIB        │ Opsional     │
+│ Izin            │ WAJIB        │ Opsional     │
+│ Sakit           │ Opsional     │ WAJIB        │
+└─────────────────┴──────────────┴──────────────┘
 
 **Dampak Database:**
-- Tabel baru: supervisor (atau tambah kolom supervisor_id di karyawan)
-- Tabel cuti_karyawan: tambah kolom status_supervisor, approved_by_supervisor,
-  approved_at_supervisor
+[+] Tabel cuti_karyawan: kolom baru dokumen_path (VARCHAR, nullable)
+[ ] Tabel jenis_cuti: tidak perlu berubah (logic di aplikasi)
 
 **Dampak Backend:**
-- CutiService: logic approval berubah total (~3 hari)
-- 2 middleware baru: supervisor role
-- Endpoint baru: supervisor approve/reject (~1 hari)
-- Update semua test cases (~1 hari)
+[+] Migration: add dokumen_path to cuti_karyawan
+[+] Storage: disk config untuk simpan file upload
+[+] StoreLeaveRequest: validasi kondisional per jenis cuti
+[+] CutiService::submit(): handle file upload + simpan path
+[+] CutiKaryawanResource: expose dokumen_url
+[~] CutiController::store(): terima file dari request
 
 **Dampak Frontend:**
-- Halaman baru untuk supervisor (~2 hari)
-- Alur status berubah: pending → supervisor_approved → approved (~1 hari)
+[ ] ...
 
-**Total Estimasi Tambahan: 8 hari kerja**
-**Timeline Baru: mundur dari 30 hari ke 38 hari**
+**Total Estimasi Tambahan:** ~2 jam
+**Timeline Baru:** Masuk ke hari 9, tidak perlu geser timeline
 
 **Rekomendasi:**
-Tunda ke versi 2.0 setelah go-live, supaya core system selesai
-tepat waktu. Versi 1.0 pakai 1 level approval (admin) seperti
-rencana awal.
+...
 
-**Keputusan Stakeholder:** [ ] Setuju tunda | [ ] Setuju tambah waktu
+**Keputusan Stakeholder:** [ ] Setuju tunda | [🗸] Setuju tambah waktu

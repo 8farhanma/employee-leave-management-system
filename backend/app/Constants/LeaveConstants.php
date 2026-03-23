@@ -48,4 +48,21 @@ final class LeaveConstants
         self::ROLE_ADMIN,
         self::ROLE_KARYAWAN,
     ];
+
+    /**
+     * Konfigurasi upload dokumen
+     */
+    public const DOKUMEN_MAX_SIZE_KB    = 2048;
+    public const DOKUMEN_ALLOWED_TYPES  = ['pdf', 'jpg', 'jpeg', 'png'];
+    public const DOKUMEN_STORAGE_FOLDER = 'dokumen-cuti';
+
+    /**
+     * Jenis cuti yang wajib keterangan 
+     */
+    public const JENIS_WAJIB_KETERANGAN = ['Cuti Tahunan', 'Izin']; 
+
+    /**
+     * Jenis cuti yang wajib dokumen 
+     */
+    public const JENIS_WAJIB_DOKUMEN = ['Sakit']; 
 }

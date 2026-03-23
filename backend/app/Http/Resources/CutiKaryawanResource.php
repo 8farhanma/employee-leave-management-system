@@ -30,15 +30,18 @@ class CutiKaryawanResource extends JsonResource
             'jumlah_hari'       => $this->jumlah_hari,
             'periode_label'     => $this->periode_label,
             'keterangan'        => $this->keterangan,
+
+            // -- Change Request #001 -------------------------------------------------------
+            'dokumen_url'       => $this->dokumen_url,  // null jika tidak ada
+            'dokumen_nama'      => $this->dokumen_nama, // null jika tidak ada
+
             'status'            => $this->status,
-            'status_label'      => $this->status_label, // "Disetujui", "Ditolak", "Menunggu"
+            'status_label'      => $this->status_label, 
             'catatan_admin'     => $this->catatan_admin,
-            'approved_by'       => $this->whenLoaded('approvedBy', function () {
-                return [
-                    'id'    => $this->approvedBy->id,
-                    'nama'  => $this->approvedBy->nama,
-                ];
-            }),
+            'approved_by'       => $this->whenLoaded('approvedBy', fn() => [
+                'id'    => $this->approvedBy->id,
+                'nama'  => $this->approvedBy->nama,
+            ]),
             'approved_at'       => $this->approved_at?->format('Y-m-d H:i:s'),
             'created_at'        => $this->created_at->format('Y-m-d H:i:s'),
         ];
