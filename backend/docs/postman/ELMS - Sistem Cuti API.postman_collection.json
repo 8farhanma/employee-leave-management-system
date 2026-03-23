@@ -1,0 +1,1622 @@
+{
+  "info": {
+    "_postman_id": "0a796bb1-04c6-4d09-9567-d77ca4977537",
+    "name": "ELMS - Sistem Cuti API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "37861791"
+  },
+  "item": [
+    {
+      "name": "🔓 Auth",
+      "item": [
+        {
+          "name": "Ping — Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"API aktif\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.success).to.be.true;\r",
+                  "    pm.expect(json.message).to.include(\"aktif\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/ping",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "ping"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login sebagai Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Response sukses\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.success).to.be.true;\r",
+                  "    pm.expect(json.data).to.have.property(\"token\");\r",
+                  "    pm.expect(json.data.karyawan.role).to.equal(\"admin\");\r",
+                  "});\r",
+                  "pm.test(\"Simpan token admin\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.environment.set(\"token_admin\", json.data.token);\r",
+                  "    console.log(\"✅ Token admin tersimpan\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"login\": \"admin@company.id\",\r\n  \"password\": \"admin123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login — Karyawan via Email (Berhasil)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Role karyawan\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.data.karyawan.role).to.equal(\"karyawan\");\r",
+                  "    pm.expect(json.data.karyawan.nik).to.equal(\"SEW001\");\r",
+                  "});\r",
+                  "pm.test(\"Simpan token karyawan\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.environment.set(\"token_karyawan\", json.data.token);\r",
+                  "    console.log(\"✅ Token karyawan tersimpan\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"login\": \"siti@company.id\",\r\n  \"password\": \"karyawan123\"\r\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": [
+                {
+                  "key": "",
+                  "value": null,
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login — Karyawan via NIK (Berhasil)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Login NIK berhasil\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.success).to.be.true;\r",
+                  "    pm.expect(json.data.karyawan.nik).to.equal(\"SEW001\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"login\": \"SEW001\",\r\n  \"password\": \"karyawan123\"\r\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": [
+                {
+                  "key": "",
+                  "value": null,
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login — NIK Lowercase (Harus Berhasil)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 — NIK lowercase diterima\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"login\": \"sew001\",\r\n  \"password\": \"karyawan123\"\r\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": [
+                {
+                  "key": "",
+                  "value": null,
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login — Password Salah (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 422\", () => {\r",
+                  "    pm.response.to.have.status(422);\r",
+                  "});\r",
+                  "pm.test(\"Ada pesan error login\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.success).to.be.false;\r",
+                  "    pm.expect(json.errors).to.have.property(\"login\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"login\": \"SEW001\",\r\n  \"password\": \"passwordsalah\"\r\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": [
+                {
+                  "key": "",
+                  "value": null,
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login — Field Kosong (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 422\", () => {\r",
+                  "    pm.response.to.have.status(422);\r",
+                  "});\r",
+                  "pm.test(\"Error login dan password\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.errors).to.have.property(\"login\");\r",
+                  "    pm.expect(json.errors).to.have.property(\"password\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": [
+                {
+                  "key": "",
+                  "value": null,
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout Admin (Berhasil)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Logout berhasil\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.success).to.be.true;\r",
+                  "    pm.expect(json.message).to.include(\"logout\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout Karyawan (Berhasil)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Logout berhasil\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.success).to.be.true;\r",
+                  "    pm.expect(json.message).to.include(\"logout\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_karyawan}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout Tanpa Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 401\", () => {\r",
+                  "    pm.response.to.have.status(401);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "👤 Profil",
+      "item": [
+        {
+          "name": "GET /me — Profil Karyawan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Ada profil dan statistik\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.data).to.have.property(\"profil\");\r",
+                  "    pm.expect(json.data).to.have.property(\"statistik\");\r",
+                  "});\r",
+                  "pm.test(\"Field profil lengkap\", () => {\r",
+                  "    const profil = pm.response.json().data.profil;\r",
+                  "    pm.expect(profil).to.have.all.keys(\r",
+                  "        \"id\",\"nik\",\"nama\",\"email\",\"departemen\",\r",
+                  "        \"role\",\"sisa_cuti\",\"sisa_cuti_label\",\"label_departemen\"\r",
+                  "    );\r",
+                  "});\r",
+                  "pm.test(\"Statistik masuk akal\", () => {\r",
+                  "    const stat = pm.response.json().data.statistik;\r",
+                  "    pm.expect(stat.jatah_tahunan).to.equal(12);\r",
+                  "    pm.expect(stat.cuti_terpakai).to.equal(12 - stat.sisa_cuti);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_karyawan}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /me — Profil Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Role adalah admin\", () => {\r",
+                  "    const profil = pm.response.json().data.profil;\r",
+                  "    pm.expect(profil.role).to.equal(\"admin\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /me — Tanpa Token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 401\", () => {\r",
+                  "    pm.response.to.have.status(401);\r",
+                  "});\r",
+                  "pm.test(\"Pesan sesi berakhir\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.success).to.be.false;\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📋 Jenis Cuti",
+      "item": [
+        {
+          "name": "GET /jenis-cuti — Semua",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Ada 3 jenis cuti\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.data).to.have.lengthOf(3);\r",
+                  "    pm.expect(json.meta.total).to.equal(3);\r",
+                  "});\r",
+                  "pm.test(\"Meta benar\", () => {\r",
+                  "    const meta = pm.response.json().meta;\r",
+                  "    pm.expect(meta.potong_jatah).to.equal(1);\r",
+                  "    pm.expect(meta.tidak_potong).to.equal(2);\r",
+                  "});\r",
+                  "pm.test(\"Struktur data benar\", () => {\r",
+                  "    const item = pm.response.json().data[0];\r",
+                  "    pm.expect(item).to.have.all.keys(\r",
+                  "        \"id\",\"nama\",\"potong_jatah\",\"keterangan\"\r",
+                  "    );\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_karyawan}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/jenis-cuti",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jenis-cuti"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /jenis-cuti?potong_jatah=true",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Hanya 1 hasil — Cuti Tahunan\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.data).to.have.lengthOf(1);\r",
+                  "    pm.expect(json.data[0].nama).to.equal(\"Cuti Tahunan\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_karyawan}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/jenis-cuti?potong_jatah=true",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jenis-cuti"
+              ],
+              "query": [
+                {
+                  "key": "potong_jatah",
+                  "value": "true",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /jenis-cuti?potong_jatah=false",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Hanya 2 hasil — Izin & Sakit\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.data).to.have.lengthOf(2);\r",
+                  "    json.data.forEach(item => {\r",
+                  "        pm.expect(item.potong_jatah == false).to.be.true;\r",
+                  "    });\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_karyawan}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/jenis-cuti?potong_jatah=false",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jenis-cuti"
+              ],
+              "query": [
+                {
+                  "key": "potong_jatah",
+                  "value": "false",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /jenis-cuti/1 — Cuti Tahunan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "pm.test(\"Data Cuti Tahunan benar\", () => {\r",
+                  "    const data = pm.response.json().data;\r",
+                  "    pm.expect(data.id).to.equal(1);\r",
+                  "    pm.expect(data.nama).to.equal(\"Cuti Tahunan\");\r",
+                  "    pm.expect(data.potong_jatah ==  true).to.be.true;\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_karyawan}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/jenis-cuti/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jenis-cuti",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /jenis-cuti/9999 — Not Found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 404\", () => {\r",
+                  "    pm.response.to.have.status(404);\r",
+                  "});\r",
+                  "pm.test(\"Pesan tidak ditemukan\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.success).to.be.false;\r",
+                  "    pm.expect(json.message).to.include(\"tidak ditemukan\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_karyawan}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/jenis-cuti/9999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jenis-cuti",
+                "9999"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🛡️ Admin - Karyawan",
+      "item": [
+        {
+          "name": "Register Karyawan — Berhasil (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 201\", () => {\r",
+                  "    pm.response.to.have.status(201);\r",
+                  "});\r",
+                  "pm.test(\"Data karyawan baru benar\", () => {\r",
+                  "    const data = pm.response.json().data;\r",
+                  "    pm.expect(data.nik).to.equal(\"FIN989\");\r",
+                  "    pm.expect(data.departemen).to.equal(\"Finishing\");\r",
+                  "    pm.expect(data.sisa_cuti).to.equal(12);\r",
+                  "    pm.expect(data.role).to.equal(\"karyawan\");\r",
+                  "});\r",
+                  "pm.test(\"Password tidak muncul di response\", () => {\r",
+                  "    const data = pm.response.json().data;\r",
+                  "    pm.expect(data).to.not.have.property(\"password\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"nik\": \"FIN989\",\r\n  \"nama\": \"Karyawan Test Baru\",\r\n  \"departemen\": \"Finishing\",\r\n  \"email\": \"test.baryu@company.id\",\r\n  \"password\": \"Karyawan123\",\r\n  \"password_confirmation\": \"Karyawan123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/karyawan/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "karyawan",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register Karyawan — Sisa Cuti Custom",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 201\", () => {\r",
+                  "    pm.response.to.have.status(201);\r",
+                  "});\r",
+                  "pm.test(\"Sisa cuti sesuai input\", () => {\r",
+                  "    const data = pm.response.json().data;\r",
+                  "    pm.expect(data.sisa_cuti).to.equal(5);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"nik\": \"CUT099\",\r\n  \"nama\": \"Karyawan Sisa Custom\",\r\n  \"departemen\": \"Cutting\",\r\n  \"email\": \"cust.cuti@company.id\",\r\n  \"password\": \"Karyawan123\",\r\n  \"password_confirmation\": \"Karyawan123\",\r\n  \"sisa_cuti\": 5\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/karyawan/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "karyawan",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register — NIK Duplikat (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 422\", () => {\r",
+                  "    pm.response.to.have.status(422);\r",
+                  "});\r",
+                  "pm.test(\"Error pada field NIK\", () => {\r",
+                  "    const errors = pm.response.json().errors;\r",
+                  "    pm.expect(errors).to.have.property(\"nik\");\r",
+                  "    pm.expect(errors.nik[0]).to.include(\"terdaftar\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"nik\": \"SEW001\",\r\n  \"nama\": \"Duplikat NIK\",\r\n  \"departemen\": \"QA\",\r\n  \"email\": \"nikduplikat@company.id\",\r\n  \"password\": \"Karyawan123\",\r\n  \"password_confirmation\": \"Karyawan123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/karyawan/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "karyawan",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register — Email Duplikat (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 422\", () => {\r",
+                  "    pm.response.to.have.status(422);\r",
+                  "});\r",
+                  "pm.test(\"Error pada field email\", () => {\r",
+                  "    const errors = pm.response.json().errors;\r",
+                  "    pm.expect(errors).to.have.property(\"email\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"nik\": \"QA099\",\r\n  \"nama\": \"Duplikat Email\",\r\n  \"departemen\": \"QA\",\r\n  \"email\": \"siti@company.id\",\r\n  \"password\": \"Karyawan123\",\r\n  \"password_confirmation\": \"Karyawan123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/karyawan/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "karyawan",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register — Konfirmasi Password Salah (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 422\", () => {\r",
+                  "    pm.response.to.have.status(422);\r",
+                  "});\r",
+                  "pm.test(\"Error konfirmasi password\", () => {\r",
+                  "    const errors = pm.response.json().errors;\r",
+                  "    pm.expect(errors).to.have.property(\"password\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"nik\": \"SEW098\",\r\n  \"nama\": \"Test Password\",\r\n  \"departemen\": \"Sewing\",\r\n  \"email\": \"testpw@company.id\",\r\n  \"password\": \"Karyawan123\",\r\n  \"password_confirmation\": \"BedaPassword999\"\r\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/karyawan/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "karyawan",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register — Departemen Tidak Valid (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 422\", () => {\r",
+                  "    pm.response.to.have.status(422);\r",
+                  "});\r",
+                  "pm.test(\"Error pada field departemen\", () => {\r",
+                  "    const errors = pm.response.json().errors;\r",
+                  "    pm.expect(errors).to.have.property(\"departemen\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"nik\": \"XYZ001\",\r\n  \"nama\": \"Test Dept\",\r\n  \"departemen\": \"Gudang\",\r\n  \"email\": \"gudang@company.id\",\r\n  \"password\": \"Karyawan123\",\r\n  \"password_confirmation\": \"Karyawan123\"\r\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/karyawan/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "karyawan",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register — Akses Karyawan Biasa (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 403 — Karyawan tidak boleh register\", () => {\r",
+                  "    pm.response.to.have.status(403);\r",
+                  "});\r",
+                  "pm.test(\"Pesan akses ditolak\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.success).to.be.false;\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_karyawan}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"nik\": \"QA098\",\r\n  \"nama\": \"Coba Akses\",\r\n  \"departemen\": \"QA\",\r\n  \"email\": \"cobaakses@company.id\",\r\n  \"password\": \"Karyawan123\",\r\n  \"password_confirmation\": \"Karyawan123\"\r\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/karyawan/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "karyawan",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register — Tanpa Token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 401\", () => {\r",
+                  "    pm.response.to.have.status(401);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"nik\": \"QA097\",\r\n  \"nama\": \"Tanpa Token\",\r\n  \"departemen\": \"QA\",\r\n  \"email\": \"tanpatoken@company.id\",\r\n  \"password\": \"Karyawan123\",\r\n  \"password_confirmation\": \"Karyawan123\"\r\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/karyawan/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "karyawan",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "⚠️ Error Handling",
+      "item": [
+        {
+          "name": "Route Tidak Ada (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 404\", () => {\r",
+                  "    pm.response.to.have.status(404);\r",
+                  "});\r",
+                  "pm.test(\"Response JSON bukan HTML\", () => {\r",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\"))\r",
+                  "      .to.include(\"application/json\");\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.success).to.be.false;\r",
+                  "    pm.expect(json.message).to.include(\"tidak ditemukan\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/endpoint-tidak-ada",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "endpoint-tidak-ada"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Method Tidak Diizinkan (405)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 405\", () => {\r",
+                  "    pm.response.to.have.status(405);\r",
+                  "});\r",
+                  "pm.test(\"Response tetap JSON\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.success).to.be.false;\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Token Tidak Valid (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 401\", () => {\r",
+                  "    pm.response.to.have.status(401);\r",
+                  "});\r",
+                  "pm.test(\"Pesan sesi berakhir\", () => {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json.success).to.be.false;\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer ini_token_palsu_tidak_valid_123",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
